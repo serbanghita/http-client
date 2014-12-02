@@ -10,9 +10,12 @@ if ($page == 'getProduct') {
     $response->result = $result;
     $response->error = null;
     $response->id = rand(0,10);
-}
 
-if ($page == 'getOrder') {
+    $handle = fopen('requests1.log', 'a');
+    fwrite($handle, $page . ' ' . date('Y-m-d H:i:s') . "\n");
+    fclose($handle);
+
+} else if ($page == 'getOrder') {
     $result = new \stdClass();
     $result->id = 5678;
     $result->name = 'First order name';
@@ -21,10 +24,15 @@ if ($page == 'getOrder') {
     $response->result = $result;
     $response->error = null;
     $response->id = rand(0,10);
+
+    $handle = fopen('requests2.log', 'a');
+    fwrite($handle, $page . ' ' . date('Y-m-d H:i:s') . "\n");
+    fclose($handle);
+
+} else {
+    echo 'NOTHING!!!';
 }
 
-$handle = fopen('requests.log', 'a');
-fwrite($handle, $page . ' ' . date('Y-m-d H:i:s') . "\n");
-fclose($handle);
+
 
 exit(json_encode($response));

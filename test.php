@@ -17,6 +17,6 @@ $requestOrder->id = rand(0,10);
 $client = new \GenericApiClient\Transport\Socks();
 $client->connect('http-client.serbang', 80);
 $client->send('GET', '/server.php?page=getProduct', json_encode($requestProduct));
-$client->send('GET', '/server.php?page=getOrder', json_encode($requestOrder));
+//$client->send('GET', '/server.php?page=getOrder', json_encode($requestOrder));
 $client->close();
 exit('Good!');

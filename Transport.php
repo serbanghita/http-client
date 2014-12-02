@@ -7,6 +7,26 @@ class Socks implements TransportInterface
     protected $port;
     protected $handler;
 
+    protected $responseHeaders = array();
+
+    private function parseHeaders($headersString)
+    {
+        $result = array();
+
+        $headersArray = explode("\r\n", $headersString);
+        if (count($headersArray) > 0) {
+            foreach ($headersArray as $headerLineString) {
+                $headerLineString = trim($headerLineString);
+                if (!empty($headerLineString) && strpos($headerLineString, ':') !== false) {
+                    $headerLineArray = explode(':', $headerLineString, 2);
+                    $result[$headerLineArray[0]] = $headerLineArray[1];
+                }
+            }
+        }
+
+        return $result;
+    }
+
     private function flattenHeaders($headersArray = array())
     {
         if (!is_array($headersArray) || empty($headersArray)) {
@@ -51,7 +71,7 @@ class Socks implements TransportInterface
             $protocol . '://' . $host . ':' . $port,
             $errno,
             $errstr,
-            30,
+            0,
             $flags,
             $context
         );
@@ -60,7 +80,8 @@ class Socks implements TransportInterface
             throw new \RuntimeException($errstr, $errno);
         }
 
-        stream_set_blocking($this->handler, 0);
+        stream_set_timeout($this->handler, 5);
+        stream_set_blocking($this->handler, 1);
 
         return true;
     }
@@ -73,8 +94,10 @@ class Socks implements TransportInterface
 
         $headers = array(
             'Host' => $this->host,
-            //'Connection' => 'keep-alive',
-            'Content-length' => strlen($requestBody) + 1
+            'Connection' => 'keep-alive',
+            'Content-length' => strlen($requestBody),
+            'Content-type' => 'application/json',
+            'Accept' => '*/*'
         );
 
         $request = $method . ' ' . $path . ' HTTP/1.1' . "\r\n";
@@ -93,45 +116,33 @@ class Socks implements TransportInterface
             throw new \RuntimeException('Could not write the request.');
         }
 
-        $response = null;
-        while (!feof($this->handler)) {
-            $line = fread($this->handler, 1024);
-            if (empty($line)) {
-                break;
-            }
-            $response .= $line;
-            echo '.';
-        }
+        $response = '';
         /*
-                $i = 0;
-                while (!feof($this->handler)) {
-
-                    //$currentPos = ftell($this->handler);
-                    //var_dump($currentPos);
-
-                    $chunk = fgets($this->handler, 128);
-                    //$chunk = stream_get_line($this->handler, 128);
-                    var_dump($chunk);
-                    //if ($chunk === false) {
-                    //    break;
-                    //}
-                    $chunk = rtrim($chunk);
-                    //if (empty($chunk)) {
-                    //    break;
-                    //}
-                    $response .= $chunk;
-                    if($i>10){ break; }
-                    $i++;
-                }
-                //while($chunk = fgets($this->handler)) {
-                //    var_dump($chunk);
-                //    $response .= $chunk;
-                //}
+        while (!feof($this->handler)) {
+            fseek($this->handler, ftell($this->handler));
+            $line = stream_get_line($this->handler, 1000000, "\n");
+            echo '.';
+            $response .= $line;
+        }
         */
+        $gotStatus = false;
+        while (($line = fgets($this->handler)) !== false) {
+            $gotStatus = $gotStatus || (strpos($line, 'HTTP') !== false);
+            if ($gotStatus) {
+                $response .= $line;
+                if (rtrim($line) === '') {
+                    break;
+                }
+            }
+        }
+
+        $this->responseHeaders = $this->parseHeaders($response);
+
+        print_r($this->responseHeaders);
 
         //var_dump($request);
         echo '---Begin Response---' . "\n";
-        print_r($response);
+        var_dump($response);
         echo "---End response---\n\n\n\n";
 
         return true;
