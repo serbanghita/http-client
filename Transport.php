@@ -7,6 +7,7 @@ class Socks implements TransportInterface
     protected $port;
     protected $handler;
 
+    protected $gotResponseHeaders = false;
     protected $responseHeaders = array();
 
     private function parseHeaders($headersString)
@@ -19,6 +20,7 @@ class Socks implements TransportInterface
                 $headerLineString = trim($headerLineString);
                 if (!empty($headerLineString) && strpos($headerLineString, ':') !== false) {
                     $headerLineArray = explode(':', $headerLineString, 2);
+                    $headerLineArray[0] = ucfirst(strtolower($headerLineArray[0]));
                     $result[$headerLineArray[0]] = $headerLineArray[1];
                 }
             }
@@ -37,6 +39,11 @@ class Socks implements TransportInterface
             $result .= $headerName . ': ' . $headerValue . "\r\n";
         }
         return $result;
+    }
+
+    public function getResponseHeader($headerName)
+    {
+        return $this->responseHeaders[$headerName];
     }
 
     public function connect($host, $port = 80)
@@ -67,7 +74,7 @@ class Socks implements TransportInterface
         //stream_context_set_option($context, 'http', 'follow_location', true);
         //stream_context_set_option($context, 'http', 'max_redirects', 1);
 
-        $this->handler = stream_socket_client(
+        $this->handler = @stream_socket_client(
             $protocol . '://' . $host . ':' . $port,
             $errno,
             $errstr,
@@ -80,7 +87,7 @@ class Socks implements TransportInterface
             throw new \RuntimeException($errstr, $errno);
         }
 
-        stream_set_timeout($this->handler, 5);
+        stream_set_timeout($this->handler, 1);
         stream_set_blocking($this->handler, 1);
 
         return true;
@@ -111,37 +118,57 @@ class Socks implements TransportInterface
 
         $send = fwrite($this->handler, $request);
 
-        //var_dump($send);
+        // var_dump($send);
+        // print_r(stream_get_meta_data($this->handler));
+
         if ($send === false) {
             throw new \RuntimeException('Could not write the request.');
         }
 
+        $headers = '';
+        $headersArray = array();
+        $gotResponseHeaders = false;
         $response = '';
-        /*
-        while (!feof($this->handler)) {
-            fseek($this->handler, ftell($this->handler));
-            $line = stream_get_line($this->handler, 1000000, "\n");
-            echo '.';
-            $response .= $line;
-        }
-        */
-        $gotStatus = false;
         while (($line = fgets($this->handler)) !== false) {
-            $gotStatus = $gotStatus || (strpos($line, 'HTTP') !== false);
-            if ($gotStatus) {
-                $response .= $line;
+            // print_r(stream_get_meta_data($this->handler));
+            // Read the headers of the current response.
+            if (!$gotResponseHeaders) {
+                $headers .= $line;
                 if (rtrim($line) === '') {
-                    break;
+                    $headersArray = $this->parseHeaders($headers);
+                    $gotResponseHeaders = true;
+                    echo "\n". '---Begin response HTTP headers---' . "\n";
+                    // var_dump($headers);
+                    var_dump($path);
+                    echo "---End response HTTP headers---\n\n";
                 }
+            } else {
+                $currentPosition = ftell($this->handler);
+                $bodyLength = isset($headersArray['Content-length']) ? (int)$headersArray['Content-length'] : 0;
+
+                $response .= $line;
+
+                if ($bodyLength>0) {
+                    $maxReadLength = $bodyLength + $currentPosition;
+                    if($currentPosition > $maxReadLength) {
+                        break;
+                    }
+                } else {
+                    if (feof($this->handler)) {
+                        break;
+                    }
+                }
+
             }
         }
 
-        $this->responseHeaders = $this->parseHeaders($response);
+        // Check for the Connection: close header.
+        $connection = isset($headersArray['Connection']) ? $headersArray['Connection'] : null;
+        if ($connection == 'close') {
+            $this->close();
+        }
 
-        print_r($this->responseHeaders);
-
-        //var_dump($request);
-        echo '---Begin Response---' . "\n";
+        echo "\n" . '---Begin Response---' . "\n";
         var_dump($response);
         echo "---End response---\n\n\n\n";
 

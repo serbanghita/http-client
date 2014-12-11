@@ -4,19 +4,26 @@ error_reporting(E_ALL);
 include_once dirname(__FILE__) . '/TransportInterface.php';
 include_once dirname(__FILE__) . '/Transport.php';
 
-$requestProduct = new \stdClass();
-$requestProduct->method = 'getProduct';
-$requestProduct->params = array('id' => 1234);
-$requestProduct->id = rand(0,10);
-
-$requestOrder = new \stdClass();
-$requestOrder->method = 'getOrder';
-$requestOrder->params = array('id' => 5678);
-$requestOrder->id = rand(0,10);
+function generateRandomString($length = 10) {
+    $characters = '0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ';
+    $charactersLength = strlen($characters);
+    $randomString = '';
+    for ($i = 0; $i < $length; $i++) {
+        $randomString .= $characters[rand(0, $charactersLength - 1)];
+    }
+    return $randomString;
+}
 
 $client = new \GenericApiClient\Transport\Socks();
 $client->connect('http-client.serbang', 80);
-$client->send('GET', '/server.php?page=getProduct', json_encode($requestProduct));
-//$client->send('GET', '/server.php?page=getOrder', json_encode($requestOrder));
+for ($i=0; $i<2; $i++) {
+
+    $request = new \stdClass();
+    $request->method = 'get' . generateRandomString(5);
+    $request->params = array('id' => rand(0,1000));
+    $request->id = rand(0,10);
+
+    $client->send('GET', '/server.php?page=' . $request->method, json_encode($request));
+}
 $client->close();
 exit('Good!');

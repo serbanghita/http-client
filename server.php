@@ -1,38 +1,15 @@
 <?php
 $page = isset($_GET['page']) ? $_GET['page'] : null;
 
-if ($page == 'getProduct') {
-    $result = new \stdClass();
-    $result->id = 1234;
-    $result->name = 'First product name';
+$result = new \stdClass();
+$result->id = rand(0,1000);
+$result->page = $page;
 
-    $response = new \stdClass();
-    $response->result = $result;
-    $response->error = null;
-    $response->id = rand(0,10);
-
-    $handle = fopen('requests1.log', 'a');
-    fwrite($handle, $page . ' ' . date('Y-m-d H:i:s') . "\n");
-    fclose($handle);
-
-} else if ($page == 'getOrder') {
-    $result = new \stdClass();
-    $result->id = 5678;
-    $result->name = 'First order name';
-
-    $response = new \stdClass();
-    $response->result = $result;
-    $response->error = null;
-    $response->id = rand(0,10);
-
-    $handle = fopen('requests2.log', 'a');
-    fwrite($handle, $page . ' ' . date('Y-m-d H:i:s') . "\n");
-    fclose($handle);
-
-} else {
-    echo 'NOTHING!!!';
-}
+$response = new \stdClass();
+$response->result = $result;
+$response->error = null;
+$response->id = rand(0,10);
 
 
-
+header('Content-type: application/json');
 exit(json_encode($response));
