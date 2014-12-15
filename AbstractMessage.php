@@ -1,49 +1,63 @@
 <?php
-namespace GenericApiClient\Transport\Headers;
+namespace GenericApiClient\Transport;
 
-class Headers
+abstract class AbstractMessage implements MessageInterface
 {
-    public $headersArray = array();
+    protected $statusCode = 0;
+    protected $headers = array();
+    protected $body;
 
-    /**
-     * @param mixed $headers Headers passed can be string or arrays.
-     */
-    public function __construct($headers)
+    public function setStatusCode($statusCode)
     {
-        if (is_string($headers)) {
-            $this->headersArray = $this->parse($headers);
-        }
+        $this->statusCode = $statusCode;
+    }
 
-        if (is_array($headers)) {
-            $this->headersArray = $headers;
-        }
+    public function getStatusCode()
+    {
+        return $this->statusCode;
+    }
+
+    public function setHeaders(array $headers)
+    {
+        $this->headers = $headers;
+    }
+
+    public function getHeaders()
+    {
+        return $this->headers;
     }
 
     public function addHeader($headerName, $headerValue)
     {
-        $this->headersArray[$headerName] = $headerValue;
+        $this->headers[$headerName] = $headerValue;
     }
 
     public function removeHeader($headerName)
     {
-        unset($this->headersArray[$headerName]);
+        unset($this->headers[$headerName]);
     }
 
-    public function getAsArray()
+    public function setBody($body)
     {
-        return $this->headersArray;
+        $this->body = $body;
     }
 
-    public function getAsString()
+    public function getBody()
     {
-        return $this->flatten($this->headersArray);
+        return $this->body;
     }
 
     /**
-     * @param string $headersString
+     *
+     * Utility methods
+     *
+    */
+
+    /**
+     * @param $headersString
      * @return array
      */
-    protected function parse($headersString)
+    protected function convertHeadersToArray($headersString)
     {
         $result = array();
 
@@ -62,7 +76,11 @@ class Headers
         return $result;
     }
 
-    protected function flatten($headersArray = array())
+    /**
+     * @param array $headersArray
+     * @return bool|string
+     */
+    protected function convertHeadersToString($headersArray = array())
     {
         if (!is_array($headersArray) || empty($headersArray)) {
             return false;
@@ -73,4 +91,5 @@ class Headers
         }
         return $result;
     }
+
 }

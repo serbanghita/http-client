@@ -1,29 +1,50 @@
 <?php
 namespace GenericApiClient\Transport;
 
-use GenericApiClient\Transport\Request\Request as Request;
-
 class Socks implements TransportInterface
 {
-    public $options;
-    public $request;
+    protected $options = array(
+        'protocol' => 'tcp',
+        'timeout' => 5,
+        'follow_location' => false,
+        'max_redirects' => 1
+    );
+
+    /**
+     * @var Request
+     */
+    protected $request;
+    protected $response;
 
     protected $handler;
 
     protected $gotResponseHeaders = false;
     protected $responseHeaders = array();
 
-
-    public function getResponseHeader($headerName)
+    public function __construct(array $transportOptions = null)
     {
-        return $this->responseHeaders[$headerName];
+        if(!is_null($transportOptions)) {
+            $this->options = array_merge($this->options, $transportOptions);
+        }
     }
 
-    public function connect(Options $options)
+    public function addOption($optionName, $optionValue)
     {
-        // Store the options for later use.
-        $this->options = $options;
+        $this->options[$optionName] = $optionValue;
+    }
 
+    public function getOption($optionName)
+    {
+        return isset($this->options[$optionName]) ? $this->options[$optionName] : null;
+    }
+
+    public function getOptions()
+    {
+        return $this->options;
+    }
+
+    public function connect()
+    {
         // Defaults.
         $errno = null;
         $errstr = null;
@@ -33,13 +54,13 @@ class Socks implements TransportInterface
         $context = stream_context_create();
 
         // Apply stream options.
-        stream_context_set_option($context, 'http', 'timeout', $this->options->timeout);
-        stream_context_set_option($context, 'http', 'follow_location', $this->options->follow_location);
-        stream_context_set_option($context, 'http', 'max_redirects', $this->options->max_redirects);
+        stream_context_set_option($context, 'http', 'timeout', $this->getOption('timeout'));
+        stream_context_set_option($context, 'http', 'follow_location', $this->getOption('follow_location'));
+        stream_context_set_option($context, 'http', 'max_redirects', $this->getOption('max_redirects'));
 
         // Create the handler. We use this in the request and response.
         $this->handler = @stream_socket_client(
-            $this->options->protocol . '://' . $this->options->host . ':' . $this->options->port,
+            $this->getOption('protocol') . '://' . $this->getOption('host') . ':' . $this->getOption('port'),
             $errno,
             $errstr,
             0,
@@ -51,31 +72,51 @@ class Socks implements TransportInterface
             throw new \RuntimeException($errstr, $errno);
         }
 
+        // @todo Incorporate these settings in the Options.
         stream_set_timeout($this->handler, 1);
         stream_set_blocking($this->handler, 1);
 
         return true;
     }
 
-    public function send(Request $request)
+    public function setRequest(array $options = null)
+    {
+        $this->request = new Request($options);
+    }
+
+    public function getRequest()
+    {
+        return $this->request;
+    }
+
+    public function request(array $options = null)
+    {
+        if (!($this->getRequest() instanceof Request)) {
+            $this->setRequest($options);
+        }
+
+        return $this->getRequest();
+    }
+
+    public function send()
     {
         if (!$this->handler) {
             throw new \RuntimeException('Trying to write but no connection was initiated.');
         }
 
-        print_r($request->getAsString());
-        exit;
+        // Apply mandatory headers.
+        $this->request()->addHeader('Host', $this->getOption('host'));
+        $this->request()->addHeader('Content-length', strlen($this->request()->getOption('body')));
+        $this->request()->addHeader('Accept', '*/*');
 
-        $send = fwrite($this->handler, $request->getAsString());
+        $send = fwrite($this->handler, $this->request()->__toString());
 
-        // var_dump($send);
-        // print_r(stream_get_meta_data($this->handler));
+        print_r(stream_get_meta_data($this->handler));
+        var_dump($send);
 
         if ($send === false) {
             throw new \RuntimeException('Could not write the request.');
         }
-
-        var_dump($send);
 
         return true;
     }

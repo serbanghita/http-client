@@ -1,24 +1,13 @@
 <?php
 namespace GenericApiClient\Transport;
 
-use GenericApiClient\Transport\Request\Request as Request;
-
 interface TransportInterface
 {
-    /**
-     * @param Options $options
-     * @return mixed
-     */
-    public function connect(Options $options);
+    public function connect();
 
-    /**
-     * @param Request $request
-     * @return mixed
-     */
-    public function send(Request $request);
+    public function send();
 
-    /**
-     * @return mixed
-     */
+    public function read();
+
     public function close();
 }
