@@ -1,7 +1,7 @@
 <?php
-namespace GenericApiClient\Transport;
+namespace GenericApiClient\Message;
 
-class Request extends AbstractMessage
+class Request extends AbstractMessage implements MessageInterface
 {
     protected $httpVersion  = '1.1';
     protected $method = 'GET';

@@ -1,47 +1,19 @@
 <?php
 namespace GenericApiClient\Transport;
 
-class Socks implements TransportInterface
+use GenericApiClient\Transport\Exception;
+
+class Socks extends AbstractTransport implements TransportInterface
 {
     protected $options = array(
-        'protocol' => 'tcp',
         'timeout' => 5,
         'follow_location' => false,
         'max_redirects' => 1
     );
 
-    /**
-     * @var Request
-     */
-    protected $request;
-    protected $response;
-
-    protected $handler;
-
+    // @todo Refactor these.
     protected $gotResponseHeaders = false;
     protected $responseHeaders = array();
-
-    public function __construct(array $transportOptions = null)
-    {
-        if(!is_null($transportOptions)) {
-            $this->options = array_merge($this->options, $transportOptions);
-        }
-    }
-
-    public function addOption($optionName, $optionValue)
-    {
-        $this->options[$optionName] = $optionValue;
-    }
-
-    public function getOption($optionName)
-    {
-        return isset($this->options[$optionName]) ? $this->options[$optionName] : null;
-    }
-
-    public function getOptions()
-    {
-        return $this->options;
-    }
 
     public function connect()
     {
@@ -60,7 +32,7 @@ class Socks implements TransportInterface
 
         // Create the handler. We use this in the request and response.
         $this->handler = @stream_socket_client(
-            $this->getOption('protocol') . '://' . $this->getOption('host') . ':' . $this->getOption('port'),
+            $this->getProtocol() . '://' . $this->getHost() . ':' . $this->getPort(),
             $errno,
             $errstr,
             0,
@@ -69,8 +41,10 @@ class Socks implements TransportInterface
         );
 
         if (!$this->handler) {
-            throw new \RuntimeException($errstr, $errno);
+            $this->close();
+            throw new Exception\RuntimeException('Cannot open stream connection.');
         }
+
 
         // @todo Incorporate these settings in the Options.
         stream_set_timeout($this->handler, 1);
@@ -79,35 +53,18 @@ class Socks implements TransportInterface
         return true;
     }
 
-    public function setRequest(array $options = null)
-    {
-        $this->request = new Request($options);
-    }
-
-    public function getRequest()
-    {
-        return $this->request;
-    }
-
-    public function request(array $options = null)
-    {
-        if (!($this->getRequest() instanceof Request)) {
-            $this->setRequest($options);
-        }
-
-        return $this->getRequest();
-    }
-
     public function send()
     {
         if (!$this->handler) {
-            throw new \RuntimeException('Trying to write but no connection was initiated.');
+            throw new Exception\RuntimeException('Trying to write but no connection is available.');
         }
 
         // Apply mandatory headers.
-        $this->request()->addHeader('Host', $this->getOption('host'));
-        $this->request()->addHeader('Content-length', strlen($this->request()->getOption('body')));
+        $this->request()->addHeader('Host', $this->getHost());
+        $this->request()->addHeader('Content-length', strlen($this->request()->getBody()));
         $this->request()->addHeader('Accept', '*/*');
+        // @todo: Merge this when using persistent connection.
+        $this->request()->addHeader('Connection', 'close');
 
         $send = fwrite($this->handler, $this->request()->__toString());
 
@@ -115,7 +72,7 @@ class Socks implements TransportInterface
         var_dump($send);
 
         if ($send === false) {
-            throw new \RuntimeException('Could not write the request.');
+            throw new Exception\RuntimeException('Could not write the request.');
         }
 
         return true;
@@ -133,11 +90,11 @@ class Socks implements TransportInterface
             if (!$gotResponseHeaders) {
                 $headers .= $line;
                 if (rtrim($line) === '') {
-                    $headersArray = $this->parseHeaders($headers);
+                    $headersArray = $this->request()->convertHeadersToArray($headers);
                     $gotResponseHeaders = true;
                     echo "\n". '---Begin response HTTP headers---' . "\n";
                     // var_dump($headers);
-                    var_dump($path);
+                    var_dump($this->request()->getPath());
                     echo "---End response HTTP headers---\n\n";
                 }
             } else {

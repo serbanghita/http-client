@@ -2,7 +2,7 @@
 error_reporting(E_ALL);
 
 include_once dirname(__FILE__) . '/TransportInterface.php';
-include_once dirname(__FILE__) . '/Transport.php';
+include_once dirname(__FILE__) . '/Socks.php';
 
 function generateRandomString($length = 10) {
     $characters = '0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ';

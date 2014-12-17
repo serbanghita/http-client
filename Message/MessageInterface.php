@@ -1,5 +1,5 @@
 <?php
-namespace GenericApiClient\Transport;
+namespace GenericApiClient\Message;
 
 interface MessageInterface
 {

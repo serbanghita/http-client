@@ -1,11 +1,19 @@
 <?php
-error_reporting(E_ALL);
+namespace GenericApiClient\Transport;
 
-include_once dirname(__FILE__) . '/TransportInterface.php';
-include_once dirname(__FILE__) . '/Transport.php';
-include_once dirname(__FILE__) . '/Request.php';
-include_once dirname(__FILE__) . '/AbstractMessage.php';
-include_once dirname(__FILE__) . '/MessageInterface.php';
+use GenericApiClient\Transport\Exception;
+
+\error_reporting(E_ALL);
+
+include_once dirname(__FILE__) . '/Message/MessageInterface.php';
+include_once dirname(__FILE__) . '/Message/AbstractMessage.php';
+include_once dirname(__FILE__) . '/Message/Request.php';
+
+include_once dirname(__FILE__) . '/Transport/TransportInterface.php';
+include_once dirname(__FILE__) . '/Transport/AbstractTransport.php';
+include_once dirname(__FILE__) . '/Transport/Socks.php';
+include_once dirname(__FILE__) . '/Transport/Exception/Exception.php';
+include_once dirname(__FILE__) . '/Transport/Exception/RuntimeException.php';
 
 function generateRandomString($length = 10) {
     $characters = '0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ';
@@ -17,15 +25,23 @@ function generateRandomString($length = 10) {
     return $randomString;
 }
 
-$transport = new \GenericApiClient\Transport\Socks();
-$transport->addOption('host', 'http-client.serbang');
-$transport->addOption('port', 80);
-$transport->connect();
 
-$transport->request()->addOption('path', '/server.php?page=' . generateRandomString(5));
-$transport->request()->addOption('body', generateRandomString(10));
-$transport->request()->addHeader('Connection', 'keep-alive');
-$transport->request()->addHeader('Content-type', 'application/json');
 
-$transport->send();
-$transport->close();
+$transport = new Socks();
+$transport->setHost('http-client.serbang'); // Replace with your host.
+try {
+    $transport->connect();
+    $transport->request()->setPath('/server.php?page=' . generateRandomString(5));
+    $transport->request()->setBody(generateRandomString(10));
+    //$transport->request()->addHeader('Connection', 'keep-alive');
+    $transport->request()->addHeader('Content-type', 'application/json');
+    $transport->send();
+    $transport->read();
+    $transport->close();
+} catch(Exception\Exception $e) {
+    var_dump($e->getCode());
+    var_dump($e->getMessage());
+} catch (Exception\RuntimeException $e) {
+    var_dump($e->getCode());
+    var_dump($e->getMessage());
+}

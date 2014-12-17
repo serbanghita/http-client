@@ -1,5 +1,5 @@
 <?php
-namespace GenericApiClient\Transport;
+namespace GenericApiClient\Message;
 
 abstract class AbstractMessage implements MessageInterface
 {
@@ -57,7 +57,7 @@ abstract class AbstractMessage implements MessageInterface
      * @param $headersString
      * @return array
      */
-    protected function convertHeadersToArray($headersString)
+    public function convertHeadersToArray($headersString)
     {
         $result = array();
 
@@ -80,7 +80,7 @@ abstract class AbstractMessage implements MessageInterface
      * @param array $headersArray
      * @return bool|string
      */
-    protected function convertHeadersToString($headersArray = array())
+    public function convertHeadersToString($headersArray = array())
     {
         if (!is_array($headersArray) || empty($headersArray)) {
             return false;
