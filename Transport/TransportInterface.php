@@ -9,6 +9,8 @@ interface TransportInterface
     public function getPort();
     public function setProtocol($protocol);
     public function getProtocol();
+    public function setProxy($proxy);
+    public function getProxy();
     public function connect();
     public function send();
     public function read();

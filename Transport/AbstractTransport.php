@@ -9,6 +9,7 @@ abstract class AbstractTransport implements TransportInterface
     protected $host;
     protected $port = 80;
     protected $protocol = 'tcp';
+    protected $proxy;
     protected $request;
     protected $response;
     protected $handler;
@@ -50,6 +51,19 @@ abstract class AbstractTransport implements TransportInterface
         return $this->protocol;
     }
 
+    /**
+     * @param string $proxy (e.g. proxy.server.local:8080)
+     */
+    public function setProxy($proxy)
+    {
+        $this->proxy = $proxy;
+    }
+
+    public function getProxy()
+    {
+        return $this->proxy;
+    }
+
     public function addOption($optionName, $optionValue)
     {
         $this->options[$optionName] = $optionValue;
@@ -70,11 +84,18 @@ abstract class AbstractTransport implements TransportInterface
         $this->request = new Request($options);
     }
 
+    /**
+     * @return Request
+     */
     public function getRequest()
     {
         return $this->request;
     }
 
+    /**
+     * @param array $options
+     * @return Request
+     */
     public function request(array $options = null)
     {
         if (!($this->getRequest() instanceof Request)) {

@@ -6,7 +6,7 @@ use GenericApiClient\Transport\Exception;
 class Socks extends AbstractTransport implements TransportInterface
 {
     protected $options = array(
-        'timeout' => 5,
+        'timeout' => 30,
         'follow_location' => false,
         'max_redirects' => 1
     );
@@ -29,25 +29,36 @@ class Socks extends AbstractTransport implements TransportInterface
         stream_context_set_option($context, 'http', 'timeout', $this->getOption('timeout'));
         stream_context_set_option($context, 'http', 'follow_location', $this->getOption('follow_location'));
         stream_context_set_option($context, 'http', 'max_redirects', $this->getOption('max_redirects'));
+        if ($this->getProxy()) {
+            echo 'here';
+            stream_context_set_option($context, 'http', 'proxy', $this->getProtocol() . '://' . $this->getProxy());
+            stream_context_set_option($context, 'http', 'request_fulluri', true);
+        }
+
+        //var_dump(file_get_contents('http://demo.mobiledetect.net/test/jsonrpc.php?page=test', false, $context));
+        //exit;
+        print_r(stream_context_get_options($context));
 
         // Create the handler. We use this in the request and response.
+        $ipAddress = gethostbyname($this->getHost());
+        var_dump($ipAddress);
         $this->handler = @stream_socket_client(
-            $this->getProtocol() . '://' . $this->getHost() . ':' . $this->getPort(),
+            $this->getProtocol() . '://' . $ipAddress . ':' . $this->getPort(),
             $errno,
             $errstr,
-            0,
+            30,
             $flags,
             $context
         );
 
         if (!$this->handler) {
             $this->close();
-            throw new Exception\RuntimeException('Cannot open stream connection.');
+            throw new Exception\RuntimeException(sprintf('Cannot open stream connection. [Reason: %s] [Code: %d]', $errstr, $errno));
         }
 
 
         // @todo Incorporate these settings in the Options.
-        stream_set_timeout($this->handler, 1);
+        stream_set_timeout($this->handler, 5);
         stream_set_blocking($this->handler, 1);
 
         return true;
