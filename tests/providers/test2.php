@@ -30,11 +30,11 @@ function generateRandomString($length = 10) {
 $transport = new Socks();
 // http://demo.mobiledetect.net/test/jsonrpc.php
 // http://http-client.serbang/server.php
-$transport->setHost('demo.mobiledetect.net');
-$transport->setProxy('proxy.avangate.local:8080');
+$transport->setHost('http-client.serbang');
+//$transport->setProxy('proxy.avangate.local:8080');
 try {
     $transport->connect();
-    $transport->request()->setPath('/test/jsonrpc.php?page=' . generateRandomString(5));
+    $transport->request()->setPath('/server.php?page=' . generateRandomString(5));
     $transport->request()->setBody(generateRandomString(10));
     //$transport->request()->addHeader('Connection', 'keep-alive');
     $transport->request()->addHeader('Content-type', 'application/json');

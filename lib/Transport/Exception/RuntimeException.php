@@ -1,5 +1,5 @@
 <?php
-namespace GenericApiClient\Transport\Exception;
+namespace HttpClient\Transport\Exception;
 
 class RuntimeException extends \RuntimeException
 {

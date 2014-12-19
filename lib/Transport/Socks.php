@@ -1,7 +1,7 @@
 <?php
-namespace GenericApiClient\Transport;
+namespace HttpClient\Transport;
 
-use GenericApiClient\Transport\Exception;
+use HttpClient\Transport\Exception;
 
 class Socks extends AbstractTransport implements TransportInterface
 {
@@ -30,20 +30,17 @@ class Socks extends AbstractTransport implements TransportInterface
         stream_context_set_option($context, 'http', 'follow_location', $this->getOption('follow_location'));
         stream_context_set_option($context, 'http', 'max_redirects', $this->getOption('max_redirects'));
         if ($this->getProxy()) {
-            echo 'here';
             stream_context_set_option($context, 'http', 'proxy', $this->getProtocol() . '://' . $this->getProxy());
             stream_context_set_option($context, 'http', 'request_fulluri', true);
         }
 
         //var_dump(file_get_contents('http://demo.mobiledetect.net/test/jsonrpc.php?page=test', false, $context));
-        //exit;
-        print_r(stream_context_get_options($context));
+        //print_r(stream_context_get_options($context));
 
+        //$ipAddress = gethostbyname($this->getHost());
         // Create the handler. We use this in the request and response.
-        $ipAddress = gethostbyname($this->getHost());
-        var_dump($ipAddress);
-        $this->handler = @stream_socket_client(
-            $this->getProtocol() . '://' . $ipAddress . ':' . $this->getPort(),
+        $this->handler = stream_socket_client(
+            $this->getProtocol() . '://' . $this->getHost() . ':' . $this->getPort(),
             $errno,
             $errstr,
             30,
@@ -55,7 +52,6 @@ class Socks extends AbstractTransport implements TransportInterface
             $this->close();
             throw new Exception\RuntimeException(sprintf('Cannot open stream connection. [Reason: %s] [Code: %d]', $errstr, $errno));
         }
-
 
         // @todo Incorporate these settings in the Options.
         stream_set_timeout($this->handler, 5);
@@ -79,8 +75,8 @@ class Socks extends AbstractTransport implements TransportInterface
 
         $send = fwrite($this->handler, $this->request()->__toString());
 
-        print_r(stream_get_meta_data($this->handler));
-        var_dump($send);
+        //print_r(stream_get_meta_data($this->handler));
+        //var_dump($send);
 
         if ($send === false) {
             throw new Exception\RuntimeException('Could not write the request.');
@@ -146,7 +142,7 @@ class Socks extends AbstractTransport implements TransportInterface
         if (is_resource($this->handler)) {
             // http://chat.stackoverflow.com/transcript/message/7727858#7727858
             stream_socket_shutdown($this->handler, STREAM_SHUT_RDWR);
-            stream_set_blocking($this->handler, false);
+            stream_set_blocking($this->handler, 0);
             fclose($this->handler);
         }
     }

@@ -1,5 +1,5 @@
 <?php
-namespace GenericApiClient\Transport;
+namespace HttpClient\Transport;
 
 interface TransportInterface
 {

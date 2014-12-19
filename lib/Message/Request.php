@@ -1,5 +1,5 @@
 <?php
-namespace GenericApiClient\Message;
+namespace HttpClient\Message;
 
 class Request extends AbstractMessage implements MessageInterface
 {

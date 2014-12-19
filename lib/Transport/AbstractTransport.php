@@ -1,7 +1,7 @@
 <?php
-namespace GenericApiClient\Transport;
+namespace HttpClient\Transport;
 
-use GenericApiClient\Message\Request;
+use HttpClient\Message\Request;
 
 abstract class AbstractTransport implements TransportInterface
 {
