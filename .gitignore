@@ -5,3 +5,4 @@
 /vendor
 /phpunit.phar
 /tests/coverage
+/composer.lock
