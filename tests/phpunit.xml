@@ -11,4 +11,17 @@
     <testsuite name="All tests">
         <directory suffix="Test.php">lib</directory>
     </testsuite>
+
+    <filter>
+        <whitelist processUncoveredFilesFromWhitelist="true">
+            <directory suffix=".php">../lib</directory>
+        </whitelist>
+        <exclude>
+            <directory>vendor</directory>
+        </exclude>
+    </filter>
+
+    <logging>
+        <log type="coverage-html" target="coverage"/>
+    </logging>
 </phpunit>

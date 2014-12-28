@@ -22,6 +22,11 @@ class Socks extends AbstractTransport implements TransportInterface
         $errstr = null;
         $flags = \STREAM_CLIENT_CONNECT | \STREAM_CLIENT_PERSISTENT;
 
+        // Perform basic checks.
+        if (!$this->getHost()) {
+            throw new Exception\RuntimeException('No host to connect to.');
+        }
+
         // Create the stream context.
         $context = stream_context_create();
 
@@ -39,7 +44,7 @@ class Socks extends AbstractTransport implements TransportInterface
 
         //$ipAddress = gethostbyname($this->getHost());
         // Create the handler. We use this in the request and response.
-        $this->handler = stream_socket_client(
+        $this->handler = $this->openSocket(
             $this->getProtocol() . '://' . $this->getHost() . ':' . $this->getPort(),
             $errno,
             $errstr,
@@ -50,7 +55,9 @@ class Socks extends AbstractTransport implements TransportInterface
 
         if (!$this->handler) {
             $this->close();
-            throw new Exception\RuntimeException(sprintf('Cannot open stream connection. [Reason: %s] [Code: %d]', $errstr, $errno));
+            throw new Exception\RuntimeException(
+                sprintf('Cannot open stream connection. [Reason: %s] [Code: %d]', $errstr, $errno)
+            );
         }
 
         // @todo Incorporate these settings in the Options.
@@ -58,6 +65,12 @@ class Socks extends AbstractTransport implements TransportInterface
         stream_set_blocking($this->handler, 1);
 
         return true;
+    }
+
+    public function openSocket($remote_socket, &$errno, &$errstr, $timeout, $flags)
+    {
+        $handler = \stream_socket_client($remote_socket, $errno, $errstr, $timeout, $flags);
+        return $handler;
     }
 
     public function send()
@@ -112,7 +125,7 @@ class Socks extends AbstractTransport implements TransportInterface
 
                 if ($bodyLength>0) {
                     $maxReadLength = $bodyLength + $currentPosition;
-                    if($currentPosition > $maxReadLength) {
+                    if ($currentPosition > $maxReadLength) {
                         break;
                     }
                 } else {
@@ -144,6 +157,9 @@ class Socks extends AbstractTransport implements TransportInterface
             stream_socket_shutdown($this->handler, STREAM_SHUT_RDWR);
             stream_set_blocking($this->handler, 0);
             fclose($this->handler);
+            return true;
+        } else {
+            return false;
         }
     }
 }

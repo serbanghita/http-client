@@ -16,7 +16,7 @@ abstract class AbstractTransport implements TransportInterface
 
     public function __construct(array $transportOptions = null)
     {
-        if(!is_null($transportOptions)) {
+        if (!is_null($transportOptions)) {
             $this->options = array_merge($this->options, $transportOptions);
         }
     }
@@ -79,9 +79,9 @@ abstract class AbstractTransport implements TransportInterface
         return $this->options;
     }
 
-    public function setRequest(array $options = null)
+    public function setRequest()
     {
-        $this->request = new Request($options);
+        $this->request = new Request();
     }
 
     /**
