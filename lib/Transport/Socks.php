@@ -1,14 +1,23 @@
 <?php
 namespace HttpClient\Transport;
 
+use HttpClient\Message\AbstractMessage;
 use HttpClient\Transport\Exception;
 
 class Socks extends AbstractTransport implements TransportInterface
 {
+    const INVALID_HOST = 0;
+    const ERROR_OPENING_STREAM = 1;
+    const INVALID_HANDLER = 2;
+    const ERROR_WRITING_TO_STREAM = 3;
+
     protected $options = array(
+        'persistent' => false,
         'timeout' => 30,
         'follow_location' => false,
-        'max_redirects' => 1
+        'max_redirects' => 1,
+        'request_timeout' => 5,
+        'request_blocking_mode' => true
     );
 
     // @todo Refactor these.
@@ -24,27 +33,17 @@ class Socks extends AbstractTransport implements TransportInterface
 
         // Perform basic checks.
         if (!$this->getHost()) {
-            throw new Exception\RuntimeException('No host to connect to.');
+            throw new Exception\RuntimeException('No host to connect to.', self::INVALID_HOST);
         }
 
-        // Create the stream context.
-        $context = stream_context_create();
-
-        // Apply stream options.
-        stream_context_set_option($context, 'http', 'timeout', $this->getOption('timeout'));
-        stream_context_set_option($context, 'http', 'follow_location', $this->getOption('follow_location'));
-        stream_context_set_option($context, 'http', 'max_redirects', $this->getOption('max_redirects'));
-        if ($this->getProxy()) {
-            stream_context_set_option($context, 'http', 'proxy', $this->getProtocol() . '://' . $this->getProxy());
-            stream_context_set_option($context, 'http', 'request_fulluri', true);
-        }
+        $context = $this->createStreamContext();
 
         //var_dump(file_get_contents('http://demo.mobiledetect.net/test/jsonrpc.php?page=test', false, $context));
         //print_r(stream_context_get_options($context));
 
         //$ipAddress = gethostbyname($this->getHost());
         // Create the handler. We use this in the request and response.
-        $this->handler = $this->openSocket(
+        $handler = $this->openStream(
             $this->getProtocol() . '://' . $this->getHost() . ':' . $this->getPort(),
             $errno,
             $errstr,
@@ -53,49 +52,94 @@ class Socks extends AbstractTransport implements TransportInterface
             $context
         );
 
-        if (!$this->handler) {
+        if ($handler === false) {
             $this->close();
             throw new Exception\RuntimeException(
-                sprintf('Cannot open stream connection. [Reason: %s] [Code: %d]', $errstr, $errno)
+                sprintf('Cannot open stream connection. [Reason: %s] [Code: %d]', $errstr, $errno),
+                self::ERROR_OPENING_STREAM
             );
         }
 
-        // @todo Incorporate these settings in the Options.
-        stream_set_timeout($this->handler, 5);
-        stream_set_blocking($this->handler, 1);
+        // Store the handler resource for later use.
+        $this->setHandler($handler);
 
         return true;
     }
 
-    public function openSocket($remote_socket, &$errno, &$errstr, $timeout, $flags)
+    protected function openStream($remote_socket, &$errno, &$errstr, $timeout, $flags)
     {
         $handler = \stream_socket_client($remote_socket, $errno, $errstr, $timeout, $flags);
         return $handler;
     }
 
-    public function send()
+    protected function createStreamContext()
     {
-        if (!$this->handler) {
-            throw new Exception\RuntimeException('Trying to write but no connection is available.');
+        // Create the stream context.
+        $context = \stream_context_create();
+
+        // Apply stream options.
+        \stream_context_set_option($context, 'http', 'timeout', $this->getOption('timeout'));
+        \stream_context_set_option($context, 'http', 'follow_location', $this->getOption('follow_location'));
+        \stream_context_set_option($context, 'http', 'max_redirects', $this->getOption('max_redirects'));
+        if ($this->getProxy()) {
+            \stream_context_set_option($context, 'http', 'proxy', $this->getProtocol() . '://' . $this->getProxy());
+            \stream_context_set_option($context, 'http', 'request_fulluri', true);
+        }
+
+        return $context;
+    }
+
+    public function send(AbstractMessage $request = null)
+    {
+        if (!$this->getHandler()) {
+            throw new Exception\RuntimeException('Trying to write but no connection is available.', self::INVALID_HANDLER);
+        }
+
+        // Apply important stream/request options.
+        $this->setStreamTimeout($this->getOption('request_timeout'));
+        $this->setStreamBlockingMode($this->getOption('request_blocking_mode'));
+
+        // Build the request object.
+        if (is_null($request)) {
+           $request = $this->request();
         }
 
         // Apply mandatory headers.
-        $this->request()->addHeader('Host', $this->getHost());
-        $this->request()->addHeader('Content-length', strlen($this->request()->getBody()));
-        $this->request()->addHeader('Accept', '*/*');
-        // @todo: Merge this when using persistent connection.
-        $this->request()->addHeader('Connection', 'close');
+        $request->addHeader('Host', $this->getHost());
+        $request->addHeader('Content-length', strlen($request->getBody()));
+        $request->addHeader('Accept', '*/*');
+        if ($this->getOption('persistent')) {
+            $request->addHeader('Connection', 'keep-alive');
+        } else {
+            $request->addHeader('Connection', 'close');
+        }
 
-        $send = fwrite($this->handler, $this->request()->__toString());
+        $send = $this->writeToStream();
 
         //print_r(stream_get_meta_data($this->handler));
         //var_dump($send);
 
         if ($send === false) {
-            throw new Exception\RuntimeException('Could not write the request.');
+            throw new Exception\RuntimeException('Could not write the request.', self::ERROR_WRITING_TO_STREAM);
         }
 
         return true;
+    }
+
+    protected function setStreamTimeout($timeout)
+    {
+        return \stream_set_timeout($this->getHandler(), (float)$timeout);
+    }
+
+    protected function setStreamBlockingMode($blockingMode)
+    {
+        return \stream_set_blocking($this->getHandler(), (bool)$blockingMode);
+    }
+
+    protected function writeToStream()
+    {
+        $send = fwrite($this->getHandler(), $this->request()->__toString());
+        return $send;
     }
 
     public function read()
@@ -104,32 +148,38 @@ class Socks extends AbstractTransport implements TransportInterface
         $headersArray = array();
         $gotResponseHeaders = false;
         $response = '';
-        while (($line = fgets($this->handler)) !== false) {
+
+        // @todo Consider code refactoring using http://stackoverflow.com/questions/18349123/stream-set-timeout-doesnt-work-in-php
+        while (($line = $this->readStreamLine($this->getHandler())) !== false) {
+            var_dump($line);
             // print_r(stream_get_meta_data($this->handler));
             // Read the headers of the current response.
             if (!$gotResponseHeaders) {
                 $headers .= $line;
                 if (rtrim($line) === '') {
-                    $headersArray = $this->request()->convertHeadersToArray($headers);
+                    $headersArray = $this->getRequest()->convertHeadersToArray($headers);
                     $gotResponseHeaders = true;
-                    echo "\n". '---Begin response HTTP headers---' . "\n";
+                    //echo "\n". '---Begin response HTTP headers---' . "\n";
                     // var_dump($headers);
-                    var_dump($this->request()->getPath());
-                    echo "---End response HTTP headers---\n\n";
+                    //var_dump($this->request()->getPath());
+                    //echo "---End response HTTP headers---\n\n";
                 }
             } else {
-                $currentPosition = ftell($this->handler);
+                $currentPosition = $this->getStreamPosition($this->getHandler());
+                echo "\n\n";
+                echo $currentPosition;
+                echo "\n\n";
                 $bodyLength = isset($headersArray['Content-length']) ? (int)$headersArray['Content-length'] : 0;
 
                 $response .= $line;
 
-                if ($bodyLength>0) {
+                if ($bodyLength > 0) {
                     $maxReadLength = $bodyLength + $currentPosition;
                     if ($currentPosition > $maxReadLength) {
                         break;
                     }
                 } else {
-                    if (feof($this->handler)) {
+                    if (feof($this->getHandler())) {
                         break;
                     }
                 }
@@ -143,11 +193,21 @@ class Socks extends AbstractTransport implements TransportInterface
             $this->close();
         }
 
-        echo "\n" . '---Begin Response---' . "\n";
-        var_dump($response);
-        echo "---End response---\n\n\n\n";
+        //echo "\n" . '---Begin Response---' . "\n";
+        //var_dump($response);
+        //echo "---End response---\n\n\n\n";
 
-        return true;
+        return $response;
+    }
+
+    public function readStreamLine($handler)
+    {
+        return \fgets($handler);
+    }
+
+    protected function getStreamPosition($handler)
+    {
+        return \ftell($handler);
     }
 
     public function close()

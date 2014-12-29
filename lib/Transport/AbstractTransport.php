@@ -104,4 +104,14 @@ abstract class AbstractTransport implements TransportInterface
 
         return $this->getRequest();
     }
+
+    public function setHandler($handler)
+    {
+        $this->handler = $handler;
+    }
+
+    public function getHandler()
+    {
+        return $this->handler;
+    }
 }

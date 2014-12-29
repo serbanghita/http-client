@@ -1,6 +1,8 @@
 <?php
 namespace HttpClient\Transport;
 
+use HttpClient\Message\AbstractMessage;
+
 interface TransportInterface
 {
     public function setHost($host);
@@ -11,8 +13,10 @@ interface TransportInterface
     public function getProtocol();
     public function setProxy($proxy);
     public function getProxy();
+    public function setHandler($handler);
+    public function getHandler();
     public function connect();
-    public function send();
+    public function send(AbstractMessage $message = null);
     public function read();
     public function close();
 }
