@@ -9,9 +9,19 @@ branches:
   only:
     - master
 
+install:
+  - composer require satooshi/php-coveralls:dev-master
+  - composer install --dev --prefer-source
+
+before_script:
+  - mkdir -p tests/coverage
+  - mkdir -p tests/coverage/logs
+
 script:
-  - composer install
-  - phpunit -v -c tests/phpunit.xml
+  - phpunit -v -c tests/phpunit.xml --coverage-clover tests/coverage/logs/clover.xml
+
+after_script:
+  - - php vendor/bin/coveralls
 
 notifications:
   email: false
