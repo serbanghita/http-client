@@ -1,19 +1,15 @@
 <?php
-namespace HttpClient\Transport;
+$composer = dirname(__FILE__) . '/../../vendor/autoload.php';
+if (!file_exists($composer)) {
+    throw new \RuntimeException("Please run 'composer install' first to set up autoloading. $composer");
+}
 
-use HttpClient\Transport\Exception;
+/**
+ * @var \Composer\Autoload\ClassLoader $autoloader
+ */
+$autoloader = include_once $composer;
 
 \error_reporting(E_ALL);
-
-include_once dirname(__FILE__) . '/../../lib/Message/MessageInterface.php';
-include_once dirname(__FILE__) . '/../../lib/Message/AbstractMessage.php';
-include_once dirname(__FILE__) . '/../../lib/Message/Request.php';
-
-include_once dirname(__FILE__) . '/../../lib/Transport/TransportInterface.php';
-include_once dirname(__FILE__) . '/../../lib/Transport/AbstractTransport.php';
-include_once dirname(__FILE__) . '/../../lib/Transport/Socks.php';
-include_once dirname(__FILE__) . '/../../lib/Transport/Exception/Exception.php';
-include_once dirname(__FILE__) . '/../../lib/Transport/Exception/RuntimeException.php';
 
 function generateRandomString($length = 10)
 {
@@ -26,9 +22,7 @@ function generateRandomString($length = 10)
     return $randomString;
 }
 
-
-
-$transport = new Socks();
+$transport = new \HttpClient\Transport\Socks();
 // http://demo.mobiledetect.net/test/jsonrpc.php
 // http://http-client.serbang/server.php
 $transport->setHost('http-client.serbang');
@@ -45,10 +39,10 @@ try {
         var_dump($responseBody);
         echo "---End Response Body---\n";
     $transport->close();
-} catch (Exception\Exception $e) {
+} catch (\HttpClient\Transport\Exception\Exception $e) {
     var_dump($e->getCode());
     var_dump($e->getMessage());
-} catch (Exception\RuntimeException $e) {
+} catch (\HttpClient\Transport\Exception\RuntimeException $e) {
     var_dump($e->getCode());
     var_dump($e->getMessage());
 }

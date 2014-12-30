@@ -138,10 +138,17 @@ class Socks extends AbstractTransport implements TransportInterface
 
     protected function writeToStream()
     {
-        $send = fwrite($this->getHandler(), $this->request()->__toString());
+        $send = \fwrite($this->getHandler(), $this->request()->__toString());
         return $send;
     }
 
+    /**
+     * Read the remote response and return the
+     * response body.
+     *
+     * @todo Register a Response object (headers, body, etc)
+     * @return string
+     */
     public function read()
     {
         // Defaults.
@@ -213,6 +220,10 @@ class Socks extends AbstractTransport implements TransportInterface
     }
 
     /**
+     * Attempt to get EOF of the stream.
+     * This help knowing when to close the request
+     * or to send another in case of multiple non-async requests.
+     *
      * @todo Study http://stackoverflow.com/questions/18349123/stream-set-timeout-doesnt-work-in-php
      * @return bool
      */
@@ -222,10 +233,15 @@ class Socks extends AbstractTransport implements TransportInterface
         return \feof($this->getHandler()) || ($metaData['unread_bytes']==0 && $metaData['eof']) || $metaData['timed_out'];
     }
 
+    /**
+     * Permanently close the stream socket.
+     *
+     * @return bool
+     */
     protected function shutDownStream()
     {
         \stream_socket_shutdown($this->getHandler(), STREAM_SHUT_RDWR);
-        fclose($this->getHandler());
+        \fclose($this->getHandler());
         return true;
     }
 
@@ -238,17 +254,23 @@ class Socks extends AbstractTransport implements TransportInterface
     public function close()
     {
         if ($this->streamHandlerIsValid()) {
-            $this->shutDownStream();
             $this->setStreamBlockingMode(false);
+            $this->shutDownStream();
             return true;
         } else {
             return false;
         }
     }
 
+    /**
+     * Check if the stream handler is still valid.
+     * Note: \get_resource_type should be 'stream' or 'persistent stream'.
+     *
+     * @return bool
+     */
     protected function streamHandlerIsValid()
     {
-        return \is_resource($this->getHandler());
+        return \is_resource($this->getHandler()) && \get_resource_type($this->getHandler());
     }
 
 }
