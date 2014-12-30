@@ -2,6 +2,8 @@ Generic HTTP Client
 ===================
 > A basic HTTP client used for talking with APIs.
 
+[![Build Status](https://travis-ci.org/serbanghita/http-client.svg?branch=master)](https://travis-ci.org/serbanghita/http-client)
+
 ### Example
 
 ```php
