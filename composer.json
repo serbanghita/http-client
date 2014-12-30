@@ -2,7 +2,7 @@
   "name": "genericapiclient/http-client",
   "type": "library",
   "description": "Basic HTTP client used for talking with APIs",
-  "keywords": ["http client", "php http client", "http", "sockets", "curl"],
+  "keywords": ["http client", "php http client", "http", "streams", "curl"],
   "homepage": "https://github.com/serbanghita/http-client",
   "license": "MIT",
   "authors": [
