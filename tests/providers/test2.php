@@ -40,7 +40,10 @@ try {
     //$transport->request()->addHeader('Connection', 'keep-alive');
     $transport->request()->addHeader('Content-type', 'application/json');
     $transport->send();
-    $transport->read();
+    $responseBody = $transport->read();
+        echo "\n" . '---Begin Response Body---' . "\n";
+        var_dump($responseBody);
+        echo "---End Response Body---\n";
     $transport->close();
 } catch (Exception\Exception $e) {
     var_dump($e->getCode());

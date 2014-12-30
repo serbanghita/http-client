@@ -32,6 +32,11 @@ abstract class AbstractMessage implements MessageInterface
         $this->headers[$headerName] = $headerValue;
     }
 
+    public function getHeader($headerName)
+    {
+        return isset($this->headers[$headerName]) ? $this->headers[$headerName] : null;
+    }
+
     public function removeHeader($headerName)
     {
         unset($this->headers[$headerName]);
@@ -68,7 +73,7 @@ abstract class AbstractMessage implements MessageInterface
                 if (!empty($headerLineString) && strpos($headerLineString, ':') !== false) {
                     $headerLineArray = explode(':', $headerLineString, 2);
                     $headerLineArray[0] = ucfirst(strtolower($headerLineArray[0]));
-                    $result[$headerLineArray[0]] = $headerLineArray[1];
+                    $result[$headerLineArray[0]] = ltrim($headerLineArray[1]);
                 }
             }
         }

@@ -144,15 +144,16 @@ class Socks extends AbstractTransport implements TransportInterface
 
     public function read()
     {
+        // Defaults.
         $headers = '';
         $headersArray = array();
         $gotResponseHeaders = false;
         $response = '';
 
-        // @todo Consider code refactoring using http://stackoverflow.com/questions/18349123/stream-set-timeout-doesnt-work-in-php
-        while (($line = $this->readStreamLine($this->getHandler())) !== false) {
-            var_dump($line);
-            // print_r(stream_get_meta_data($this->handler));
+        // Reading the incoming stream.
+        while (($line = $this->readStreamLine()) !== false) {
+            // var_dump($line);
+            // print_r($this->getStreamMetaData($this->handler));
             // Read the headers of the current response.
             if (!$gotResponseHeaders) {
                 $headers .= $line;
@@ -165,10 +166,10 @@ class Socks extends AbstractTransport implements TransportInterface
                     //echo "---End response HTTP headers---\n\n";
                 }
             } else {
-                $currentPosition = $this->getStreamPosition($this->getHandler());
-                echo "\n\n";
-                echo $currentPosition;
-                echo "\n\n";
+                $currentPosition = $this->getStreamPosition();
+                //echo "\n\n";
+                //echo $currentPosition;
+                //echo "\n\n";
                 $bodyLength = isset($headersArray['Content-length']) ? (int)$headersArray['Content-length'] : 0;
 
                 $response .= $line;
@@ -179,7 +180,7 @@ class Socks extends AbstractTransport implements TransportInterface
                         break;
                     }
                 } else {
-                    if (feof($this->getHandler())) {
+                    if ($this->getStreamEOF()) {
                         break;
                     }
                 }
@@ -193,33 +194,61 @@ class Socks extends AbstractTransport implements TransportInterface
             $this->close();
         }
 
-        //echo "\n" . '---Begin Response---' . "\n";
-        //var_dump($response);
-        //echo "---End response---\n\n\n\n";
-
         return $response;
     }
 
-    public function readStreamLine($handler)
+    protected function readStreamLine()
     {
-        return \fgets($handler);
+        return \fgets($this->getHandler());
     }
 
-    protected function getStreamPosition($handler)
+    protected function getStreamPosition()
     {
-        return \ftell($handler);
+        return \ftell($this->getHandler());
     }
 
+    protected function getStreamMetaData()
+    {
+        return \stream_get_meta_data($this->getHandler());
+    }
+
+    /**
+     * @todo Study http://stackoverflow.com/questions/18349123/stream-set-timeout-doesnt-work-in-php
+     * @return bool
+     */
+    protected function getStreamEOF()
+    {
+        $metaData = $this->getStreamMetaData();
+        return \feof($this->getHandler()) || ($metaData['unread_bytes']==0 && $metaData['eof']) || $metaData['timed_out'];
+    }
+
+    protected function shutDownStream()
+    {
+        \stream_socket_shutdown($this->getHandler(), STREAM_SHUT_RDWR);
+        fclose($this->getHandler());
+        return true;
+    }
+
+    /**
+     * Close the connection.
+     *
+     * @see http://chat.stackoverflow.com/transcript/message/7727858#7727858
+     * @return bool
+     */
     public function close()
     {
-        if (is_resource($this->handler)) {
-            // http://chat.stackoverflow.com/transcript/message/7727858#7727858
-            stream_socket_shutdown($this->handler, STREAM_SHUT_RDWR);
-            stream_set_blocking($this->handler, 0);
-            fclose($this->handler);
+        if ($this->streamHandlerIsValid()) {
+            $this->shutDownStream();
+            $this->setStreamBlockingMode(false);
             return true;
         } else {
             return false;
         }
     }
+
+    protected function streamHandlerIsValid()
+    {
+        return \is_resource($this->getHandler());
+    }
+
 }
