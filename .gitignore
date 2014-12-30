@@ -1,6 +1,5 @@
 /.idea
 /*.log
-/composer.json
 /composer.phar
 /vendor
 /phpunit.phar

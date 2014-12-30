@@ -1,0 +1,27 @@
+{
+  "name": "genericapiclient/http-client",
+  "type": "library",
+  "description": "Basic HTTP client used for talking with APIs",
+  "keywords": ["http client", "php http client", "http", "sockets", "curl"],
+  "homepage": "https://github.com/serbanghita/http-client",
+  "license": "MIT",
+  "authors": [
+    {
+      "name": "Serban Ghita",
+      "email": "serbanghita@gmail.com",
+      "role": "Developer"
+    }
+  ],
+  "require": {
+    "php": ">=5.3.0"
+  },
+  "require-dev": {
+    "phpunit/phpunit": "*"
+  },
+  "autoload": {
+    "psr-4": {
+      "HttpClient\\": "lib/",
+      "HttpClientTest\\": "tests/lib/"
+    }
+  }
+}
