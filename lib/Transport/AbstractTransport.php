@@ -2,6 +2,7 @@
 namespace HttpClient\Transport;
 
 use HttpClient\Message\Request;
+use HttpClient\Message\Response;
 
 abstract class AbstractTransport implements TransportInterface
 {
@@ -79,7 +80,7 @@ abstract class AbstractTransport implements TransportInterface
         return $this->options;
     }
 
-    public function setRequest()
+    public function createRequest()
     {
         $this->request = new Request();
     }
@@ -93,16 +94,40 @@ abstract class AbstractTransport implements TransportInterface
     }
 
     /**
-     * @param array $options
      * @return Request
      */
-    public function request(array $options = null)
+    public function request()
     {
         if (!($this->getRequest() instanceof Request)) {
-            $this->setRequest($options);
+            $this->createRequest();
         }
 
         return $this->getRequest();
+    }
+
+    public function createResponse()
+    {
+        $this->response = new Response();
+    }
+
+    /**
+     * @return Response
+     */
+    public function getResponse()
+    {
+        return $this->response;
+    }
+
+    /**
+     * @return Response
+     */
+    public function response()
+    {
+        if (!($this->getResponse() instanceof Response)) {
+            $this->createResponse();
+        }
+
+        return $this->getResponse();
     }
 
     public function setHandler($handler)

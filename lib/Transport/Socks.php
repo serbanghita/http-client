@@ -16,7 +16,7 @@ class Socks extends AbstractTransport implements TransportInterface
         'timeout' => 30,
         'follow_location' => false,
         'max_redirects' => 1,
-        'request_timeout' => 5,
+        'request_timeout' => 10,
         'request_blocking_mode' => true
     );
 
@@ -92,7 +92,10 @@ class Socks extends AbstractTransport implements TransportInterface
     public function send(AbstractMessage $request = null)
     {
         if (!$this->getHandler()) {
-            throw new Exception\RuntimeException('Trying to write but no connection is available.', self::INVALID_HANDLER);
+            throw new Exception\RuntimeException(
+                'Trying to write but no connection is available.',
+                self::INVALID_HANDLER
+            );
         }
 
         // Apply important stream/request options.
@@ -101,7 +104,7 @@ class Socks extends AbstractTransport implements TransportInterface
 
         // Build the request object.
         if (is_null($request)) {
-           $request = $this->request();
+            $request = $this->request();
         }
 
         // Apply mandatory headers.
@@ -146,67 +149,106 @@ class Socks extends AbstractTransport implements TransportInterface
      * Read the remote response and return the
      * response body.
      *
-     * @todo Register a Response object (headers, body, etc)
      * @return string
      */
     public function read()
     {
         // Defaults.
-        $headers = '';
-        $headersArray = array();
         $gotResponseHeaders = false;
-        $response = '';
+        $responseHeaders = '';
+        $responseBody = '';
+
+        // Create a new response object for
+        // the incoming data.
+        $this->createResponse();
 
         // Reading the incoming stream.
         while (($line = $this->readStreamLine()) !== false) {
-            // var_dump($line);
             // print_r($this->getStreamMetaData($this->handler));
+
             // Read the headers of the current response.
             if (!$gotResponseHeaders) {
-                $headers .= $line;
-                if (rtrim($line) === '') {
-                    $headersArray = $this->getRequest()->convertHeadersToArray($headers);
+                // Store the response headers for later.
+                $responseHeaders .= $line;
+
+                // Check for headers boundary.
+                if ($this->isStreamHeadersEnd($line)) {
+
+                    // Convert the headers string to array.
+                    $headersArray = $this->getResponse()->convertHeadersToArray($responseHeaders);
+                    // Save the response headers.
+                    $this->getResponse()->setHeaders($headersArray);
+
+                    $bodyLength = $this->getResponse()->getHeader('Content-length');
+                    $transferIsChunked = ($this->getResponse()->getHeader('Transfer-encoding') == 'chunked' ? true : false);
                     $gotResponseHeaders = true;
-                    //echo "\n". '---Begin response HTTP headers---' . "\n";
-                    // var_dump($headers);
-                    //var_dump($this->request()->getPath());
-                    //echo "---End response HTTP headers---\n\n";
                 }
             } else {
-                $currentPosition = $this->getStreamPosition();
-                //echo "\n\n";
-                //echo $currentPosition;
-                //echo "\n\n";
-                $bodyLength = isset($headersArray['Content-length']) ? (int)$headersArray['Content-length'] : 0;
 
-                $response .= $line;
+
+                // Chunked tranfer.
+                if ($transferIsChunked) {
+                    if (!isset($chunkLength)) {
+                        $chunkLength = hexdec($line);
+                        $chunkLengthReadSoFar = 0;
+                        continue;
+                    }
+
+                    if ($chunkLength > 0) {
+                        // Store the response body for later.
+                        $responseBody .= $line;
+                        $chunkLengthReadSoFar += strlen($line);
+                        if ($chunkLengthReadSoFar >= $chunkLength) {
+                            unset($chunkLength);
+                        }
+                        continue;
+                    }
+
+                    if ($chunkLength == 0) {
+                        break;
+                    }
+                }
+
+                $currentPosition = $this->getStreamPosition();
+
+                // Store te response body for later.
+                $responseBody .= $line;
+
 
                 if ($bodyLength > 0) {
+                    // If we know the body length, check if we reached the maximum length.
                     $maxReadLength = $bodyLength + $currentPosition;
                     if ($currentPosition > $maxReadLength) {
                         break;
                     }
                 } else {
+                    // If body length is ambiguous, check for EOF or other
+                    // similar signals.
                     if ($this->getStreamEOF()) {
                         break;
                     }
                 }
-
             }
         }
 
-        // Check for the Connection: close header.
-        $connection = isset($headersArray['Connection']) ? $headersArray['Connection'] : null;
-        if ($connection == 'close') {
+        $this->getResponse()->setBody($responseBody);
+
+        // Check for the 'Connection: close' header.
+        if ($this->getResponse()->getHeader('Connection') == 'close') {
             $this->close();
         }
 
-        return $response;
+        return $responseBody;
     }
 
     protected function readStreamLine()
     {
         return \fgets($this->getHandler());
+    }
+
+    protected function isStreamHeadersEnd($line)
+    {
+        return (rtrim($line) === '');
     }
 
     protected function getStreamPosition()
@@ -230,7 +272,9 @@ class Socks extends AbstractTransport implements TransportInterface
     protected function getStreamEOF()
     {
         $metaData = $this->getStreamMetaData();
-        return \feof($this->getHandler()) || ($metaData['unread_bytes']==0 && $metaData['eof']) || $metaData['timed_out'];
+        return \feof($this->getHandler()) ||
+                ($metaData['unread_bytes']==0 && $metaData['eof']) ||
+                $metaData['timed_out'];
     }
 
     /**

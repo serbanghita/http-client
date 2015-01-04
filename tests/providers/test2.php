@@ -26,19 +26,29 @@ $transport = new \HttpClient\Transport\Socks();
 // http://demo.mobiledetect.net/test/jsonrpc.php
 // http://http-client.serbang/server.php
 $transport->setHost('http-client.serbang');
-//$transport->setProxy('proxy.avangate.local:8080');
+// $transport->setProxy('proxy.avangate.local:8080');
+//$transport->setProtocol('ssl');
+//$transport->setHost('demo.mobiledetect.net');
+
 try {
     $transport->connect();
-    $transport->request()->setPath('/tests/providers/response/jsonrpc.php?page=' . generateRandomString(5));
+    $transport->request()->setPath('/tests/providers/response/text-chunked.php');
+    //$transport->request()->setPath('/tests/providers/response/jsonrpc.php?page=' . generateRandomString(5));
+    //$transport->request()->setPath('/tests/response/jsonrpc.php?page=' . generateRandomString(5));
     $transport->request()->setBody(generateRandomString(10));
-    //$transport->request()->addHeader('Connection', 'keep-alive');
-    $transport->request()->addHeader('Content-type', 'application/json');
+    $transport->request()->addHeader('Connection', 'keep-alive');
+    //$transport->request()->addHeader('Content-type', 'application/json');
     $transport->send();
-    $responseBody = $transport->read();
-        echo "\n" . '---Begin Response Body---' . "\n";
-        var_dump($responseBody);
-        echo "---End Response Body---\n";
+    $transport->read();
     $transport->close();
+
+    echo "\n" . '---Begin Headers Body---' . "\n";
+    var_dump($transport->getResponse()->getHeaders());
+    echo "---End Headers Body---\n";
+    echo "\n" . '---Begin Response Body---' . "\n";
+    var_dump($transport->getResponse()->getBody());
+    echo "---End Response Body---\n";
+
 } catch (\HttpClient\Transport\Exception\Exception $e) {
     var_dump($e->getCode());
     var_dump($e->getMessage());

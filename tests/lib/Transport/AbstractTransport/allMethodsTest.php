@@ -91,12 +91,12 @@ class AllMethodsTest extends \PHPUnit_Framework_TestCase
     }
 
     /**
-     * set request creates a new request object
+     * create request creates a new request object
      */
-    public function testSetRequestCreatesANewRequestObject()
+    public function testCreateRequestCreatesANewRequestObject()
     {
         $mock = $this->getMockForAbstractClass('\HttpClient\Transport\AbstractTransport');
-        $mock->setRequest();
+        $mock->createRequest();
 
         $this->assertInstanceOf('\HttpClient\Message\Request', $mock->getRequest());
     }
@@ -113,6 +113,16 @@ class AllMethodsTest extends \PHPUnit_Framework_TestCase
         $this->assertSame($request, $request2);
     }
 
-
+    /**
+     * response method creates and returns a response object
+     */
+    public function testResponseMethodCreatesAndReturnsAResponseObject()
+    {
+        $mock = $this->getMockForAbstractClass('\HttpClient\Transport\AbstractTransport');
+        $response = $mock->response();
+        $this->assertInstanceOf('\HttpClient\Message\Response', $response);
+        $response2 = $mock->response();
+        $this->assertSame($response, $response2);
+    }
 
 }

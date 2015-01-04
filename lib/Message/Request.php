@@ -13,16 +13,6 @@ class Request extends AbstractMessage implements MessageInterface
         'Accept' => '*/*'
     );
 
-    public function setHttpVersion($httpVersion)
-    {
-        $this->httpVersion = $httpVersion;
-    }
-
-    public function getHttpVersion()
-    {
-        return $this->httpVersion;
-    }
-
     public function setMethod($method)
     {
         $this->method = $method;

@@ -4,6 +4,7 @@ namespace HttpClient\Message;
 abstract class AbstractMessage implements MessageInterface
 {
     protected $statusCode = 0;
+    protected $httpVersion;
     protected $headers = array();
     protected $body;
 
@@ -15,6 +16,16 @@ abstract class AbstractMessage implements MessageInterface
     public function getStatusCode()
     {
         return $this->statusCode;
+    }
+
+    public function setHttpVersion($httpVersion)
+    {
+        $this->httpVersion = $httpVersion;
+    }
+
+    public function getHttpVersion()
+    {
+        return $this->httpVersion;
     }
 
     public function setHeaders(array $headers)
