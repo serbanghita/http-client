@@ -8,24 +8,31 @@ Generic HTTP Client
 ### Example
 
 ```php
-$transport = new Socks();
-$transport->setHost('www.myhost.local');
-//$transport->setProxy('proxy.myhost.local:8080');
+$transport = new \HttpClient\Transport\Socks();
+$transport->setHost('http-client.serbang');
+
 try {
     $transport->connect();
-    $transport->request()->setPath('/tests/providers/response/jsonrpc.php?page=' . generateRandomString(5));
+    $transport->request()->setPath('/tests/providers/response/text-chunked.php');
     $transport->request()->setBody(generateRandomString(10));
-    $transport->request()->addHeader('Content-type', 'application/json');
+    $transport->request()->headers()->add('Connection', 'keep-alive');
+    $transport->request()->headers()->add('Content-type', 'application/json');
     $transport->send();
-    $responseBody = $transport->read();
-        echo "\n" . '---Begin Response Body---' . "\n";
-        var_dump($responseBody);
-        echo "---End Response Body---\n";
+    $transport->read();
     $transport->close();
-} catch (Exception\Exception $e) {
+
+    // Debug.
+    echo "\n" . '---Begin Headers Body---' . "\n";
+    var_dump($transport->getResponse()->getHeaders());
+    echo "---End Headers Body---\n";
+    echo "\n" . '---Begin Response Body---' . "\n";
+    var_dump($transport->getResponse()->getBody());
+    echo "---End Response Body---\n";
+
+} catch (\HttpClient\Transport\Exception\Exception $e) {
     var_dump($e->getCode());
     var_dump($e->getMessage());
-} catch (Exception\RuntimeException $e) {
+} catch (\HttpClient\Transport\Exception\RuntimeException $e) {
     var_dump($e->getCode());
     var_dump($e->getMessage());
 }
