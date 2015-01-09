@@ -2,6 +2,7 @@
 namespace HttpClient\Transport;
 
 use HttpClient\Message\AbstractMessage;
+use HttpClient\Message\Headers;
 use HttpClient\Transport\Exception;
 
 class Socks extends AbstractTransport implements TransportInterface
@@ -108,13 +109,14 @@ class Socks extends AbstractTransport implements TransportInterface
         }
 
         // Apply mandatory headers.
-        $request->addHeader('Host', $this->getHost());
-        $request->addHeader('Content-length', strlen($request->getBody()));
-        $request->addHeader('Accept', '*/*');
+        $request->setHeaders(new Headers());
+        $request->headers()->add('Host', $this->getHost());
+        $request->headers()->add('Content-length', strlen($request->getBody()));
+        $request->headers()->add('Accept', '*/*');
         if ($this->getOption('persistent')) {
-            $request->addHeader('Connection', 'keep-alive');
+            $request->headers()->add('Connection', 'keep-alive');
         } else {
-            $request->addHeader('Connection', 'close');
+            $request->headers()->add('Connection', 'close');
         }
 
         $send = $this->writeToStream();
@@ -167,27 +169,20 @@ class Socks extends AbstractTransport implements TransportInterface
             // print_r($this->getStreamMetaData($this->handler));
 
             // Read the headers of the current response.
-            if (!$gotResponseHeaders) {
+            if (!$this->getResponse()->headersWereParsed()) {
                 // Store the response headers for later.
                 $responseHeaders .= $line;
 
                 // Check for headers boundary.
                 if ($this->isStreamHeadersEnd($line)) {
-
-                    // Convert the headers string to array.
-                    $headersArray = $this->getResponse()->convertHeadersToArray($responseHeaders);
                     // Save the response headers.
-                    $this->getResponse()->setHeaders($headersArray);
-
-                    $bodyLength = $this->getResponse()->getHeader('Content-length');
-                    $transferIsChunked = ($this->getResponse()->getHeader('Transfer-encoding') == 'chunked' ? true : false);
-                    $gotResponseHeaders = true;
+                    $this->getResponse()->setHeaders(new Headers($responseHeaders));
+                    $this->getResponse()->setHeadersWereParsed(true);
                 }
             } else {
-
-
-                // Chunked tranfer.
-                if ($transferIsChunked) {
+                // Dealing with chunked transfer message.
+                // @see http://en.wikipedia.org/wiki/Chunked_transfer_encoding
+                if ($this->getResponse()->isChunked()) {
                     if (!isset($chunkLength)) {
                         $chunkLength = hexdec($line);
                         $chunkLengthReadSoFar = 0;
@@ -196,7 +191,7 @@ class Socks extends AbstractTransport implements TransportInterface
 
                     if ($chunkLength > 0) {
                         // Store the response body for later.
-                        $responseBody .= $line;
+                        $this->getResponse()->addBodyChunk($line);
                         $chunkLengthReadSoFar += strlen($line);
                         if ($chunkLengthReadSoFar >= $chunkLength) {
                             unset($chunkLength);
@@ -212,12 +207,12 @@ class Socks extends AbstractTransport implements TransportInterface
                 $currentPosition = $this->getStreamPosition();
 
                 // Store te response body for later.
-                $responseBody .= $line;
+                $this->getResponse()->addBodyChunk($line);
 
 
-                if ($bodyLength > 0) {
+                if ($this->getResponse()->getBodyLength() > 0) {
                     // If we know the body length, check if we reached the maximum length.
-                    $maxReadLength = $bodyLength + $currentPosition;
+                    $maxReadLength = $this->getResponse()->getBodyLength() + $currentPosition;
                     if ($currentPosition > $maxReadLength) {
                         break;
                     }
@@ -231,14 +226,13 @@ class Socks extends AbstractTransport implements TransportInterface
             }
         }
 
-        $this->getResponse()->setBody($responseBody);
 
         // Check for the 'Connection: close' header.
         if ($this->getResponse()->getHeader('Connection') == 'close') {
             $this->close();
         }
 
-        return $responseBody;
+        return $this->getResponse()->getBody();
     }
 
     protected function readStreamLine()

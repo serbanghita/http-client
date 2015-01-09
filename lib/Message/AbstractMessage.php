@@ -5,8 +5,9 @@ abstract class AbstractMessage implements MessageInterface
 {
     protected $statusCode = 0;
     protected $httpVersion;
-    protected $headers = array();
+    protected $headers;
     protected $body;
+    protected $bodyChunked = array();
 
     public function setStatusCode($statusCode)
     {
@@ -28,7 +29,7 @@ abstract class AbstractMessage implements MessageInterface
         return $this->httpVersion;
     }
 
-    public function setHeaders(array $headers)
+    public function setHeaders(Headers $headers)
     {
         $this->headers = $headers;
     }
@@ -38,19 +39,23 @@ abstract class AbstractMessage implements MessageInterface
         return $this->headers;
     }
 
-    public function addHeader($headerName, $headerValue)
+    /**
+     * @return Headers
+     */
+    public function headers()
     {
-        $this->headers[$headerName] = $headerValue;
+        return $this->headers;
     }
 
-    public function getHeader($headerName)
+    public function addBodyChunk($bodyChunk)
     {
-        return isset($this->headers[$headerName]) ? $this->headers[$headerName] : null;
+        $this->bodyChunked[] = $bodyChunk;
+        $this->body .= $bodyChunk;
     }
 
-    public function removeHeader($headerName)
+    public function getCurrentBodyChunk()
     {
-        unset($this->headers[$headerName]);
+        return end($this->bodyChunked);
     }
 
     public function setBody($body)
@@ -61,51 +66,6 @@ abstract class AbstractMessage implements MessageInterface
     public function getBody()
     {
         return $this->body;
-    }
-
-    /**
-     *
-     * Utility methods
-     *
-    */
-
-    /**
-     * @param $headersString
-     * @return array
-     */
-    public function convertHeadersToArray($headersString)
-    {
-        $result = array();
-
-        $headersArray = explode("\r\n", $headersString);
-        if (count($headersArray) > 0) {
-            foreach ($headersArray as $headerLineString) {
-                $headerLineString = trim($headerLineString);
-                if (!empty($headerLineString) && strpos($headerLineString, ':') !== false) {
-                    $headerLineArray = explode(':', $headerLineString, 2);
-                    $headerLineArray[0] = ucfirst(strtolower($headerLineArray[0]));
-                    $result[$headerLineArray[0]] = ltrim($headerLineArray[1]);
-                }
-            }
-        }
-
-        return $result;
-    }
-
-    /**
-     * @param array $headersArray
-     * @return bool|string
-     */
-    public function convertHeadersToString($headersArray = array())
-    {
-        if (!is_array($headersArray) || empty($headersArray)) {
-            return false;
-        }
-        $result = '';
-        foreach ($headersArray as $headerName => $headerValue) {
-            $result .= $headerName . ': ' . $headerValue . "\r\n";
-        }
-        return $result;
     }
 
 }
