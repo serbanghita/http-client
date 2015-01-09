@@ -1,6 +1,7 @@
 <?php
 namespace HttpClientTest\Message\Request;
 
+use HttpClient\Message\Headers;
 use \HttpClient\Message\Request;
 
 class AllMethodsTest extends \PHPUnit_Framework_TestCase
@@ -46,14 +47,13 @@ class AllMethodsTest extends \PHPUnit_Framework_TestCase
 	 */
 	public function testConvertingTheRequestObjectToStringReturnsTheExpectedHeadersAndBodyOutput()
 	{
-        $mock = $this->getMockBuilder('\HttpClient\Message\Request')
-                ->setMethods(array('convertHeadersToString', 'getHeaders', 'getBody'))
-                ->getMock();
-
         $mockedHeadersString = 'Host: test.mysite.local' . "\r\n" .
-            'Connection: close' . "\r\n";
-        $mock->method('convertHeadersToString')->willReturn($mockedHeadersString);
-        $mock->method('getHeaders')->willReturn('whateva');
+        'Connection: close' . "\r\n";
+        $headers = new Headers($mockedHeadersString);
+        $mock = $this->getMockBuilder('\HttpClient\Message\Request')
+                ->setConstructorArgs(array($headers))
+                ->setMethods(array('convertHeadersToString', 'getBody'))
+                ->getMock();
 
         $inputBody = 'this is the body';
         $inputMethod = 'GET';
@@ -66,7 +66,7 @@ class AllMethodsTest extends \PHPUnit_Framework_TestCase
         $mock->setHttpVersion($inputHttpVersion);
 
         $expectedString = $inputMethod . ' ' . $inputPath . ' HTTP/' . $inputHttpVersion . "\r\n";
-        $expectedString .= $mockedHeadersString;
+        $expectedString .= $headers->getAsString();
         $expectedString .= "\r\n";
         $expectedString .= $inputBody;
 

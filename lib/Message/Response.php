@@ -3,6 +3,10 @@ namespace HttpClient\Message;
 
 class Response extends AbstractMessage implements MessageInterface
 {
+    /**
+     * @var Headers
+     */
+    protected $headers;
     protected $headersWereParsed = false;
 
     public function setHeadersWereParsed($headersWereParsed)
@@ -17,11 +21,11 @@ class Response extends AbstractMessage implements MessageInterface
 
     public function isChunked()
     {
-        return ($this->getHeader('Transfer-encoding') == 'chunked');
+        return ($this->headers()->get('Transfer-encoding') == 'chunked');
     }
 
     public function getBodyLength()
     {
-        return $this->getHeader('Content-length');
+        return $this->headers()->get('Content-length');
     }
 }

@@ -5,9 +5,21 @@ abstract class AbstractMessage implements MessageInterface
 {
     protected $statusCode = 0;
     protected $httpVersion;
+    /**
+     * @var Headers
+     */
     protected $headers;
     protected $body;
     protected $bodyChunked = array();
+
+    public function __construct(Headers $headers = null)
+    {
+        if (is_null($headers)) {
+            $this->headers = new Headers();
+        } else {
+            $this->headers = $headers;
+        }
+    }
 
     public function setStatusCode($statusCode)
     {

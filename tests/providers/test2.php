@@ -36,7 +36,7 @@ try {
     //$transport->request()->setPath('/tests/providers/response/jsonrpc.php?page=' . generateRandomString(5));
     //$transport->request()->setPath('/tests/response/jsonrpc.php?page=' . generateRandomString(5));
     $transport->request()->setBody(generateRandomString(10));
-    $transport->request()->addHeader('Connection', 'keep-alive');
+    $transport->request()->headers()->add('Connection', 'keep-alive');
     //$transport->request()->addHeader('Content-type', 'application/json');
     $transport->send();
     $transport->read();

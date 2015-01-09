@@ -41,8 +41,10 @@ class Headers
     public function getAsString()
     {
         $result = '';
-        foreach ($this->headers as $headerName => $headerValue) {
-            $result .= $headerName . ': ' . $headerValue . "\r\n";
+        if( count($this->headers) > 0 ) {
+            foreach ($this->headers as $headerName => $headerValue) {
+                $result .= $headerName . ': ' . $headerValue . "\r\n";
+            }
         }
         return $result;
     }

@@ -7,11 +7,10 @@ class Request extends AbstractMessage implements MessageInterface
     protected $method = 'GET';
     protected $path = null;
 
-    protected $headers = array(
-        'Host' => null,
-        'Content-length' => 0,
-        'Accept' => '*/*'
-    );
+    /**
+     * @var Headers
+     */
+    protected $headers;
 
     public function setMethod($method)
     {
@@ -36,7 +35,7 @@ class Request extends AbstractMessage implements MessageInterface
     public function __toString()
     {
         $requestString = $this->getMethod() . ' ' . $this->getPath() . ' HTTP/' . $this->getHttpVersion() . "\r\n";
-        $requestString .= $this->convertHeadersToString($this->getHeaders());
+        $requestString .= $this->headers()->getAsString();
         $requestString .= "\r\n";
         $requestString .= $this->getBody();
 
