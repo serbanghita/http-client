@@ -226,9 +226,7 @@ class Socks extends AbstractTransport implements TransportInterface
             }
         }
 
-
-        // Check for the 'Connection: close' header.
-        if ($this->getResponse()->headers()->get('Connection') == 'close') {
+        if ($this->getResponse()->isClosed()) {
             $this->close();
         }
 

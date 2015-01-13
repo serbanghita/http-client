@@ -24,6 +24,15 @@ class Response extends AbstractMessage implements MessageInterface
         return ($this->headers()->get('Transfer-encoding') == 'chunked');
     }
 
+    /**
+     * Check for the 'Connection: close' header.
+     * @return bool
+     */
+    public function isClosed()
+    {
+        return ($this->headers()->get('Connection') == 'close');
+    }
+
     public function getBodyLength()
     {
         return $this->headers()->get('Content-length');
